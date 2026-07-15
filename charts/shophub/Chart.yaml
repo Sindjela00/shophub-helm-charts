@@ -1,0 +1,11 @@
+apiVersion: v2
+name: shophub
+description: Deploys the ShopHub application, wired to Shop operator CRDs and kube-prometheus-stack.
+type: application
+version: 0.1.0
+appVersion: "0.1.0"
+dependencies:
+  - name: kube-prometheus-stack
+    version: "*"
+    repository: "https://prometheus-community.github.io/helm-charts"
+    condition: kube-prometheus-stack.enabled
