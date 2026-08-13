@@ -1,0 +1,25 @@
+{{- if .Values.rbac.create }}
+# Namespaced Role in kubernetes.namespace (not .Release.Namespace — the app's pod can run
+# anywhere, but only ever needs to touch CRs in the one namespace it's configured for). Verbs
+# match exactly what KubernetesShopProvisioningService calls: create/patch/delete only, no
+# get/list/watch — the app's own Postgres database is the source of truth for which
+# ShopSites exist, it never reads the CRs back.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: {{ include "shophub.fullname" . }}-shop-crs
+  namespace: {{ .Values.kubernetes.namespace }}
+  labels:
+    {{- include "shophub.labels" . | nindent 4 }}
+rules:
+  - apiGroups:
+      - apps.shophub.io
+    resources:
+      - shops
+      - wallets
+      - discordchannels
+    verbs:
+      - create
+      - patch
+      - delete
+{{- end }}

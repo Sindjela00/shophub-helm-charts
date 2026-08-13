@@ -1,1 +1,92 @@
-# TODO: ShopHub Deployment manifest.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "shophub.fullname" . }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "shophub.labels" . | nindent 4 }}
+spec:
+  {{- if not .Values.autoscaling.enabled }}
+  replicas: {{ .Values.replicaCount }}
+  {{- end }}
+  selector:
+    matchLabels:
+      {{- include "shophub.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "shophub.selectorLabels" . | nindent 8 }}
+      {{- with .Values.podAnnotations }}
+      annotations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+    spec:
+      serviceAccountName: {{ include "shophub.serviceAccountName" . }}
+      containers:
+        - name: shophub-app
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          env:
+            - name: ASPNETCORE_ENVIRONMENT
+              # NOTE: shophub-app's own Program.cs only runs EF Core migrations and exposes
+              # OpenAPI/dev CORS when this is "Development" — it does neither in Production.
+              # There's no separate migration step wired up yet anywhere in ShopHub, so until
+              # shophub-app grows one, the database schema needs creating out-of-band (or set
+              # this to "Development" as a stopgap, accepting its other side effects).
+              value: "Production"
+            - name: ConnectionStrings__Default
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "shophub.databaseSecretName" . }}
+                  key: {{ ternary .Values.database.existingSecretKey "ConnectionString" (ne .Values.database.existingSecret "") }}
+            - name: Jwt__Issuer
+              value: {{ .Values.jwt.issuer | quote }}
+            - name: Jwt__Audience
+              value: {{ .Values.jwt.audience | quote }}
+            - name: Jwt__ExpiryMinutes
+              value: {{ .Values.jwt.expiryMinutes | quote }}
+            - name: Jwt__SigningKey
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "shophub.jwtSecretName" . }}
+                  key: {{ ternary .Values.jwt.existingSecretKey "SigningKey" (ne .Values.jwt.existingSecret "") }}
+            - name: Kubernetes__Namespace
+              value: {{ .Values.kubernetes.namespace | quote }}
+            - name: Kubernetes__InCluster
+              value: {{ .Values.kubernetes.inCluster | quote }}
+          ports:
+            - name: http
+              containerPort: {{ .Values.service.targetPort }}
+              protocol: TCP
+          # No HTTP health endpoint exists in shophub-app yet (no /health route mapped), so
+          # this uses a plain TCP check — it can't tell "up" from "up but broken", but it's
+          # honest about what's actually verifiable today. Switch to httpGet once one exists.
+          livenessProbe:
+            tcpSocket:
+              port: http
+            initialDelaySeconds: 15
+            periodSeconds: 20
+          readinessProbe:
+            tcpSocket:
+              port: http
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          resources:
+            {{- toYaml .Values.resources | nindent 12 }}
+          securityContext:
+            allowPrivilegeEscalation: false
+            runAsNonRoot: true
+            capabilities:
+              drop: ["ALL"]
+      {{- with .Values.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}

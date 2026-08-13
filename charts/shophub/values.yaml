@@ -1,3 +1,90 @@
-# TODO: image repository/tag, replica count, ingress host, resources, autoscaling, etc.
+# -- Deploys shophub-app's backend API (ShopHub.Api). The frontend isn't containerized yet
+# (shophub-app's own CI only builds/publishes the backend image), so there's nothing for this
+# chart to deploy for it yet — see that repo's CI for the current state.
+replicaCount: 1
+
+image:
+  repository: ghcr.io/sindjela00/shophub-app
+  # -- Defaults to .Chart.AppVersion when unset. No versioned release has been tagged yet, so
+  # the default here is "latest" (also published by shophub-app's CI on every merge to
+  # master) — pin this to a real semver tag once one exists.
+  tag: latest
+  pullPolicy: IfNotPresent
+
+serviceAccount:
+  create: true
+  # -- Defaults to the chart's fullname if empty.
+  name: ""
+  annotations: {}
+
+# Grants this release's ServiceAccount permission to create/patch/delete Shop, Wallet, and
+# DiscordChannel custom resources in kubernetes.namespace — required for the app's shop-site
+# management API to work at all (KubernetesShopProvisioningService). Namespaced Role, not a
+# ClusterRole: the app only ever touches CRs in its own configured namespace.
+rbac:
+  create: true
+
+service:
+  type: ClusterIP
+  port: 80
+  targetPort: 8080
+
+ingress:
+  enabled: false
+  className: ""
+  annotations: {}
+  host: shophub.example.com
+  tls: []
+
+autoscaling:
+  enabled: false
+  minReplicas: 1
+  maxReplicas: 5
+  targetCPUUtilizationPercentage: 80
+
+resources:
+  requests:
+    cpu: 50m
+    memory: 128Mi
+  limits:
+    cpu: 1000m
+    memory: 512Mi
+
+jwt:
+  issuer: shophub-app
+  audience: shophub-app-clients
+  expiryMinutes: 60
+  # -- Inline signing key (creates a Secret). Prefer existingSecret in production — it keeps
+  # the key out of `helm install -f values.yaml` shell history and `helm get values` output.
+  signingKey: ""
+  existingSecret: ""
+  existingSecretKey: SigningKey
+
+database:
+  # -- Inline Postgres connection string (creates a Secret). Prefer existingSecret in
+  # production, same reasoning as jwt.signingKey above.
+  connectionString: ""
+  existingSecret: ""
+  existingSecretKey: ConnectionString
+
+kubernetes:
+  # -- Namespace the app creates Shop/Wallet/DiscordChannel custom resources in — must match
+  # wherever the shop-operator chart's operator is watching (that chart's own default is also
+  # "shops").
+  namespace: shops
+  # -- Always true for an in-cluster deployment: makes the app use its ServiceAccount token
+  # instead of trying to read a local kubeconfig, which won't exist in the pod.
+  inCluster: true
+
+# kube-prometheus-stack is a chart dependency (see Chart.yaml) providing the observability
+# stack (spec 3.3). Disable if the cluster already has its own Prometheus/Grafana stack.
 kube-prometheus-stack:
   enabled: true
+
+nameOverride: ""
+fullnameOverride: ""
+
+podAnnotations: {}
+nodeSelector: {}
+tolerations: []
+affinity: {}
