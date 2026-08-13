@@ -1,0 +1,102 @@
+# Rules mirror config/rbac/role.yaml in shophub-shop-operator exactly — that file is real
+# `controller-gen rbac:roleName=manager-role` output generated from the reconcilers'
+# +kubebuilder:rbac markers (see that repo's "RBAC & sample CRs" PR), not hand-guessed. Keep
+# the two in sync if the operator's RBAC markers change.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: {{ include "shop-operator.fullname" . }}-manager-role
+  labels:
+    {{- include "shop-operator.labels" . | nindent 4 }}
+rules:
+  - apiGroups:
+      - ""
+    resources:
+      - events
+    verbs:
+      - create
+      - patch
+  - apiGroups:
+      - ""
+    resources:
+      - services
+    verbs:
+      - create
+      - get
+      - list
+      - patch
+      - update
+      - watch
+  - apiGroups:
+      - apps
+    resources:
+      - deployments
+    verbs:
+      - create
+      - get
+      - list
+      - patch
+      - update
+      - watch
+  - apiGroups:
+      - apps.shophub.io
+    resources:
+      - discordchannels
+    verbs:
+      - get
+      - list
+      - patch
+      - update
+      - watch
+  - apiGroups:
+      - apps.shophub.io
+    resources:
+      - discordchannels/status
+      - shops/status
+      - wallets/status
+    verbs:
+      - get
+      - patch
+      - update
+  - apiGroups:
+      - apps.shophub.io
+    resources:
+      - shops
+      - wallets
+    verbs:
+      - get
+      - list
+      - watch
+  - apiGroups:
+      - coordination.k8s.io
+    resources:
+      - leases
+    verbs:
+      - create
+      - get
+      - list
+      - patch
+      - update
+      - watch
+  - apiGroups:
+      - postgresql.cnpg.io
+    resources:
+      - clusters
+    verbs:
+      - create
+      - get
+      - list
+      - patch
+      - update
+      - watch
+  - apiGroups:
+      - redis.redis.opstreelabs.in
+    resources:
+      - redis
+    verbs:
+      - create
+      - get
+      - list
+      - patch
+      - update
+      - watch

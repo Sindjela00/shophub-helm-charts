@@ -1,1 +1,71 @@
-# TODO: image repository/tag, resource limits, RBAC scope, CRD install toggle, etc.
+# -- Number of operator replicas. The manager supports leader election (leaderElection.enabled)
+# for running more than one, but a single controller-manager is the normal setup.
+replicaCount: 1
+
+image:
+  repository: ghcr.io/sindjela00/shophub-shop-operator
+  # -- Defaults to .Chart.AppVersion when unset. No versioned release has been tagged yet, so
+  # the default here is "latest" (also published by the operator's CI on every merge to
+  # master) — pin this to a real semver tag once one exists.
+  tag: latest
+  pullPolicy: IfNotPresent
+
+# -- Enables controller-runtime leader election, so more than one replica can run safely
+# (only one is ever active at a time). Off by default since replicaCount defaults to 1.
+leaderElection:
+  enabled: false
+
+serviceAccount:
+  create: true
+  # -- Defaults to the chart's fullname if empty.
+  name: ""
+  annotations: {}
+
+# CRDs (Shop, Wallet, DiscordChannel) live in this chart's crds/ directory, Helm's dedicated
+# mechanism for CRDs (https://helm.sh/docs/chart_best_practices/custom_resource_definitions/).
+# Helm installs them before any other template and — deliberately — never upgrades or deletes
+# them on `helm upgrade`/`helm uninstall`, so a botched release can't take the CRDs (and
+# everyone's Shop/Wallet/DiscordChannel resources) down with it.
+crds:
+  # -- Set to false to skip installing the CRDs at all (e.g. if they're already managed
+  # separately). Only affects the initial `helm install`, per the Helm CRD limitation above.
+  install: true
+
+# The Discord bot credentials the DiscordChannel controller uses to create each shop's alert
+# channel. Prefer existingSecret in production — it keeps the token out of `helm install -f
+# values.yaml` shell history and `helm get values` output. Leave both unset to run the
+# DiscordChannel controller without working Discord integration (channel creation will fail
+# and retry, everything else is unaffected).
+discord:
+  botToken: ""
+  guildId: ""
+  # -- Name of a pre-existing Secret to read DISCORD_BOT_TOKEN/DISCORD_GUILD_ID from, instead
+  # of the botToken/guildId values above.
+  existingSecret: ""
+  existingSecretBotTokenKey: DISCORD_BOT_TOKEN
+  existingSecretGuildIdKey: DISCORD_GUILD_ID
+
+# -- Overrides the storefront image the Shop controller deploys for each Shop (SHOP_IMAGE env
+# var) — this is NOT the operator's own image (see image.repository above). Left empty to use
+# the operator's built-in default (ghcr.io/sindjela00/shophub-shop:latest).
+shopImage: ""
+
+# -- Overrides the Redis image used for "light" database-tier shops (SHOP_REDIS_IMAGE env
+# var). Left empty to use the operator's built-in default (redis:7.2-alpine).
+shopRedisImage: ""
+
+resources:
+  requests:
+    cpu: 10m
+    memory: 64Mi
+  limits:
+    cpu: 500m
+    memory: 256Mi
+
+nameOverride: ""
+fullnameOverride: ""
+
+podAnnotations: {}
+nodeSelector: {}
+tolerations: []
+affinity: {}
