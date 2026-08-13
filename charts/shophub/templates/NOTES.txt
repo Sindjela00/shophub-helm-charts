@@ -1,1 +1,29 @@
-TODO: post-install usage notes (e.g. how to reach the ShopHub UI/ingress).
+shophub has been installed.
+
+Check the app is running:
+  kubectl get deployment -n {{ .Release.Namespace }} {{ include "shophub.fullname" . }}
+
+{{- if .Values.ingress.enabled }}
+
+Reachable at:
+  http{{ if .Values.ingress.tls }}s{{ end }}://{{ .Values.ingress.host }}
+{{- else }}
+
+No Ingress configured (ingress.enabled=false). Reach it from inside the cluster at:
+  {{ include "shophub.fullname" . }}.{{ .Release.Namespace }}.svc.cluster.local:{{ .Values.service.port }}
+{{- end }}
+
+{{- if not (or .Values.database.existingSecret .Values.database.connectionString) }}
+
+WARNING: No database connection string configured (database.connectionString or
+database.existingSecret) — the app will fail to start without one.
+{{- end }}
+{{- if not (or .Values.jwt.existingSecret .Values.jwt.signingKey) }}
+
+WARNING: No JWT signing key configured (jwt.signingKey or jwt.existingSecret) — auth endpoints
+will fail without one.
+{{- end }}
+
+NOTE: shophub-app only runs its EF Core migrations automatically when ASPNETCORE_ENVIRONMENT
+is "Development" (this chart defaults it to "Production"). There's no separate migration step
+wired up yet, so make sure the database schema exists before traffic hits this release.
