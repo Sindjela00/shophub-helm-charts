@@ -1,0 +1,14 @@
+shop-operator has been installed.
+
+Check the manager is running:
+  kubectl get deployment -n {{ .Release.Namespace }} {{ include "shop-operator.fullname" . }}
+
+CRDs installed by this release:
+  kubectl get crd shops.apps.shophub.io wallets.apps.shophub.io discordchannels.apps.shophub.io
+
+{{- if not (or .Values.discord.existingSecret .Values.discord.botToken) }}
+
+NOTE: No Discord bot credentials were configured (discord.botToken/guildId or
+discord.existingSecret). The DiscordChannel controller will run but won't be able to create
+shop alert channels until you set one of those and upgrade the release.
+{{- end }}
