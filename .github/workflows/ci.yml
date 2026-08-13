@@ -1,0 +1,25 @@
+# CI pipeline — triggered on every PR against develop/master.
+# TODO (tracked in the "Operator Helm chart" / "Application Helm chart" issues):
+#   - helm template rendering (needs kube-prometheus-stack fetched as a real dependency first)
+#   - chart-testing (ct lint/install) once there's a cluster to install against
+name: CI
+on:
+  pull_request:
+    branches: [develop, master]
+  push:
+    branches: [master]
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Helm
+        uses: azure/setup-helm@v4
+
+      - name: Lint charts
+        run: |
+          for chart in charts/*/; do
+            helm lint "$chart"
+          done
