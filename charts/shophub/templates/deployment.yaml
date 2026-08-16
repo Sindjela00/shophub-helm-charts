@@ -54,6 +54,25 @@ spec:
               value: {{ .Values.kubernetes.namespace | quote }}
             - name: Kubernetes__InCluster
               value: {{ .Values.kubernetes.inCluster | quote }}
+            - name: Grafana__BaseUrl
+              value: {{ .Values.grafana.baseUrl | quote }}
+            - name: Grafana__UsersOrgName
+              value: {{ .Values.grafana.usersOrgName | quote }}
+            - name: Grafana__AdminUser
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.grafana.existingSecret }}
+                  key: {{ .Values.grafana.existingSecretAdminUserKey }}
+            - name: Grafana__AdminPassword
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.grafana.existingSecret }}
+                  key: {{ .Values.grafana.existingSecretAdminPasswordKey }}
+            - name: Grafana__UsersOrgServiceAccountToken
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.grafana.existingSecret }}
+                  key: {{ .Values.grafana.existingSecretServiceAccountTokenKey }}
           ports:
             - name: http
               containerPort: {{ .Values.service.targetPort }}
