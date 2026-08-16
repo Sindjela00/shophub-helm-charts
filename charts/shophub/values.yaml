@@ -67,6 +67,28 @@ database:
   existingSecret: ""
   existingSecretKey: ConnectionString
 
+grafana:
+  # -- Cluster-internal only — Grafana has no public Ingress (see shophub-kube-state's Grafana
+  # access-control values); the app's own /grafana-proxy route (GrafanaProvisioningService,
+  # scoped Grafana access) is the only way a browser ever reaches it. Point this at the
+  # kube-prometheus-stack Grafana Service DNS name, e.g.
+  # "http://shophub-grafana.shophub.svc.cluster.local".
+  baseUrl: ""
+  # -- Org that holds every ShopHub end user and their per-shop folders, kept separate from
+  # the default org's cluster/maintainer dashboards. Must match whatever name was used when
+  # bootstrapping the org + service account (see BOOTSTRAP.md) — this chart doesn't create
+  # either, since Grafana has no declarative way to provision an org-scoped service account
+  # token.
+  usersOrgName: "ShopHub Users"
+  # -- AdminUser/AdminPassword/ServiceAccountToken keys, from the one-time bootstrap in
+  # BOOTSTRAP.md. No inline equivalent (unlike jwt.signingKey/database.connectionString) —
+  # these are provisioning-time credentials, not a single value worth typing into
+  # `helm install -f`.
+  existingSecret: ""
+  existingSecretAdminUserKey: AdminUser
+  existingSecretAdminPasswordKey: AdminPassword
+  existingSecretServiceAccountTokenKey: ServiceAccountToken
+
 kubernetes:
   # -- Namespace the app creates Shop/Wallet/DiscordChannel custom resources in — must match
   # wherever the shop-operator chart's operator is watching (that chart's own default is also
