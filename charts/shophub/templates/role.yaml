@@ -22,4 +22,12 @@ rules:
       - create
       - patch
       - delete
+  # ShopAdminKeyService reads back the per-shop admin-key Secret
+  # shophub-shop-operator provisions — get only, this never creates or modifies it.
+  - apiGroups:
+      - ""
+    resources:
+      - secrets
+    verbs:
+      - get
 {{- end }}
