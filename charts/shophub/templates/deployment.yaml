@@ -56,6 +56,12 @@ spec:
               value: {{ .Values.kubernetes.inCluster | quote }}
             - name: Kubernetes__ExternalHost
               value: {{ .Values.kubernetes.externalHost | quote }}
+            - name: Discord__ClientId
+              value: {{ .Values.discord.clientId | quote }}
+            - name: Discord__BotTokenSecretName
+              value: {{ .Values.discord.botTokenSecretName | quote }}
+            - name: Discord__BotTokenSecretKey
+              value: {{ .Values.discord.botTokenSecretKey | quote }}
             - name: Grafana__BaseUrl
               value: {{ .Values.grafana.baseUrl | quote }}
             - name: Grafana__UsersOrgName

@@ -44,6 +44,10 @@ discord:
   existingSecret: ""
   existingSecretBotTokenKey: DISCORD_BOT_TOKEN
   existingSecretGuildIdKey: DISCORD_GUILD_ID
+  # -- Channel name for shophub-app's own platform-level alert channel (created in the default
+  # guild above, alongside shophub-app's own metrics/alerts). Empty (the default) skips creating
+  # it entirely — set this once you actually want platform alerting wired up.
+  platformChannelName: ""
 
 # -- Overrides the storefront image the Shop controller deploys for each Shop (SHOP_IMAGE env
 # var) — this is NOT the operator's own image (see image.repository above). Left empty to use

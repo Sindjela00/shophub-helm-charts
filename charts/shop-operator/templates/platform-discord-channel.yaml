@@ -1,0 +1,18 @@
+{{- if .Values.discord.platformChannelName }}
+# shophub-app's own alert channel — the platform-level counterpart to the per-shop
+# DiscordChannel CRs shophub-app's backend creates dynamically. Deliberately has no guildId, so
+# DiscordChannelReconciler falls back to the operator's own default guild (DISCORD_GUILD_ID),
+# the same guild any not-yet-attached shop's channel would use. Static and declarative here
+# rather than created by shophub-app, since there's exactly one of these and no per-user
+# onboarding step makes sense for it.
+apiVersion: apps.shophub.io/v1
+kind: DiscordChannel
+metadata:
+  name: shophub-app
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "shop-operator.labels" . | nindent 4 }}
+spec:
+  shopRef: shophub-app
+  channelName: {{ .Values.discord.platformChannelName | quote }}
+{{- end }}
