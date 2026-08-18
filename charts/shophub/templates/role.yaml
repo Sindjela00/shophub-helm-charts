@@ -30,4 +30,12 @@ rules:
       - secrets
     verbs:
       - get
+  # ShopSiteUrlService reads back a shop's Service to report its allocated NodePort —
+  # get only, this never creates or modifies it (shophub-shop-operator owns that).
+  - apiGroups:
+      - ""
+    resources:
+      - services
+    verbs:
+      - get
 {{- end }}
