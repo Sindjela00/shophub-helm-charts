@@ -74,3 +74,19 @@ or the one this chart generates from .Values.database.connectionString.
 {{- printf "%s-database" (include "shophub.fullname" .) }}
 {{- end }}
 {{- end }}
+
+{{/*
+Name of the Discord bot token Secret to use — either a user-supplied existingSecret, or the one
+this chart generates from .Values.discord.botToken/guildId. shophub-shop-operator's
+DiscordChannelReconciler reads this exact Secret live via the Kubernetes API (it already has
+cluster-wide `secrets: get` via its ClusterRole, so no extra RBAC grant is needed for that
+cross-namespace read) — its own chart's discord.secretName/secretNamespace values must be kept
+in sync with whatever this resolves to and .Release.Namespace, respectively.
+*/}}
+{{- define "shophub.discordSecretName" -}}
+{{- if .Values.discord.existingSecret }}
+{{- .Values.discord.existingSecret }}
+{{- else }}
+{{- printf "%s-discord" (include "shophub.fullname" .) }}
+{{- end }}
+{{- end }}

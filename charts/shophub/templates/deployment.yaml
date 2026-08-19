@@ -58,10 +58,17 @@ spec:
               value: {{ .Values.kubernetes.externalHost | quote }}
             - name: Discord__ClientId
               value: {{ .Values.discord.clientId | quote }}
-            - name: Discord__BotTokenSecretName
-              value: {{ .Values.discord.botTokenSecretName | quote }}
-            - name: Discord__BotTokenSecretKey
-              value: {{ .Values.discord.botTokenSecretKey | quote }}
+            {{- if or .Values.discord.existingSecret .Values.discord.botToken }}
+            # Optional, unlike jwt/database above: leave both botToken and existingSecret unset
+            # to run without Discord onboarding working (endpoints degrade gracefully — see
+            # ShopDiscordService), rather than forcing every install to have a real Discord bot
+            # just to boot.
+            - name: Discord__BotToken
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "shophub.discordSecretName" . }}
+                  key: {{ ternary .Values.discord.existingSecretBotTokenKey "DISCORD_BOT_TOKEN" (ne .Values.discord.existingSecret "") }}
+            {{- end }}
             - name: Grafana__BaseUrl
               value: {{ .Values.grafana.baseUrl | quote }}
             - name: Grafana__UsersOrgName

@@ -32,18 +32,19 @@ serviceAccount:
 # since crds/ is unconditional by design (upgrade/uninstall never touch it regardless).
 
 # The Discord bot credentials the DiscordChannel controller uses to create each shop's alert
-# channel. Prefer existingSecret in production — it keeps the token out of `helm install -f
-# values.yaml` shell history and `helm get values` output. Leave both unset to run the
-# DiscordChannel controller without working Discord integration (channel creation will fail
-# and retry, everything else is unaffected).
+# channel. This chart does NOT own that Secret — the shophub chart does (it's shophub-app's own
+# credential too, for the bot-invite/verify onboarding flow), and this operator reads it live
+# via the Kubernetes API at reconcile time instead of injecting it into its own env. That only
+# works because this operator's ClusterRole already grants cluster-wide `secrets: get` — no
+# extra RBAC is needed for the cross-namespace read. secretName/secretNamespace below must match
+# whatever the shophub chart's discord.existingSecret (or its computed default,
+# "<shophub release fullname>-discord") and .Release.Namespace resolve to; if either chart's
+# naming overrides diverge, update these to match.
 discord:
-  botToken: ""
-  guildId: ""
-  # -- Name of a pre-existing Secret to read DISCORD_BOT_TOKEN/DISCORD_GUILD_ID from, instead
-  # of the botToken/guildId values above.
-  existingSecret: ""
-  existingSecretBotTokenKey: DISCORD_BOT_TOKEN
-  existingSecretGuildIdKey: DISCORD_GUILD_ID
+  secretNamespace: shophub
+  secretName: shophub-discord
+  secretBotTokenKey: DISCORD_BOT_TOKEN
+  secretGuildIdKey: DISCORD_GUILD_ID
   # -- Channel name for shophub-app's own platform-level alert channel (created in the default
   # guild above, alongside shophub-app's own metrics/alerts). Empty (the default) skips creating
   # it entirely — set this once you actually want platform alerting wired up.

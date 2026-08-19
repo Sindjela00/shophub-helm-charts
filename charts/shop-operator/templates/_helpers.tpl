@@ -51,14 +51,3 @@ ServiceAccount name to use.
 {{- end }}
 {{- end }}
 
-{{/*
-Name of the Discord bot credentials Secret to use — either a user-supplied existingSecret, or
-the one this chart generates from .Values.discord.botToken/guildId.
-*/}}
-{{- define "shop-operator.discordSecretName" -}}
-{{- if .Values.discord.existingSecret }}
-{{- .Values.discord.existingSecret }}
-{{- else }}
-{{- printf "%s-discord" (include "shop-operator.fullname" .) }}
-{{- end }}
-{{- end }}
