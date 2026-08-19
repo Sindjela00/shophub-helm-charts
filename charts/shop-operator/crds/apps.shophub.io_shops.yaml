@@ -1,39 +1,49 @@
-{{- if .Values.crds.install }}
-# Mirrors shophub-shop-operator's config/crd/bases/apps.shophub.io_discordchannels.yaml
-# exactly (real `controller-gen crd` output) — see apps.shophub.io_shops.yaml in this same
-# directory for why this lives under templates/ instead of Helm's crds/ folder. Keep the two
-# in sync if the operator's CRD schema changes.
+# Mirrors shophub-shop-operator's config/crd/bases/apps.shophub.io_shops.yaml exactly (real
+# `controller-gen crd` output). Lives in Helm's special crds/ directory (not templates/) so it's
+# always installed *before* anything else in this release, with an explicit discovery-cache
+# refresh afterward — Helm's own client stays unaware of a brand-new CRD's REST endpoint until
+# that refresh happens, so a plain templated CRD (even one sorted before other manifests by
+# Kind) can still race any custom resource created in the same install/upgrade with
+# "no matches for kind" on a genuinely fresh cluster. Only crds/ avoids that race reliably —
+# see ../templates/platform-discord-channel.yaml, which used to work around this with a
+# post-install hook before this fix, and still failed on a truly fresh cluster because the race
+# was in Helm's own client cache, not manifest ordering.
 #
-# This is the CRD backing ../platform-discord-channel.yaml's DiscordChannel CR. That template
-# is deliberately a post-install hook (not a plain resource) so it never gets submitted to the
-# API server in the same apply batch as this CRD — see the comment there for why.
+# Trade-off: this folder is unconditional — there's no values-driven way to skip installing
+# these CRDs anymore. Use Helm's own `--skip-crds` flag on `helm install` instead (upgrade never
+# touches crds/ regardless). The resource-policy annotation keeps Helm's default
+# delete-on-uninstall behavior from taking existing Shop/Wallet/DiscordChannel resources down
+# with it.
 apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
-  name: discordchannels.apps.shophub.io
+  name: shops.apps.shophub.io
   annotations:
     helm.sh/resource-policy: keep
     controller-gen.kubebuilder.io/version: v0.16.5
 spec:
   group: apps.shophub.io
   names:
-    kind: DiscordChannel
-    listKind: DiscordChannelList
-    plural: discordchannels
-    singular: discordchannel
+    kind: Shop
+    listKind: ShopList
+    plural: shops
+    singular: shop
   scope: Namespaced
   versions:
   - additionalPrinterColumns:
-    - jsonPath: .spec.shopRef
-      name: Shop
+    - jsonPath: .spec.availability
+      name: Availability
       type: string
-    - jsonPath: .spec.channelName
-      name: Channel
+    - jsonPath: .spec.databaseKind
+      name: Database
+      type: string
+    - jsonPath: .status.phase
+      name: Phase
       type: string
     name: v1
     schema:
       openAPIV3Schema:
-        description: DiscordChannel is the Schema for the discordchannels API.
+        description: Shop is the Schema for the shops API.
         properties:
           apiVersion:
             description: |-
@@ -53,34 +63,43 @@ spec:
           metadata:
             type: object
           spec:
-            description: DiscordChannelSpec defines the desired state of DiscordChannel.
+            description: ShopSpec defines the desired state of Shop.
             properties:
-              channelName:
-                description: ChannelName is the desired Discord channel name for this
-                  shop's alert notifications.
+              availability:
+                default: standard
+                description: 'Availability controls replica count: standard=2, high=3.'
+                enum:
+                - standard
+                - high
+                type: string
+              databaseKind:
+                default: standard
+                description: 'DatabaseKind selects the shop''s database: standard=PostgreSQL
+                  (CNPG), light=Redis.'
+                enum:
+                - standard
+                - light
+                type: string
+              name:
+                description: Name is the shop's display name.
                 minLength: 1
                 type: string
-              guildId:
-                description: |-
-                  GuildID is the Discord server (guild) this channel should be created in — the shop
-                  owner's own server, once they've invited the bot to it. Left empty, the reconciler falls
-                  back to the operator's own default guild (DISCORD_GUILD_ID), which is also how
-                  shophub-app's own platform-level alert channel is provisioned (it never sets this field).
-                type: string
-              shopRef:
-                description: ShopRef is the name of the owning Shop resource, in the
-                  same namespace.
+              walletAddress:
+                description: WalletAddress is the on-chain address that receives this
+                  shop's customer payments.
                 minLength: 1
                 type: string
             required:
-            - channelName
-            - shopRef
+            - name
+            - walletAddress
             type: object
           status:
-            description: DiscordChannelStatus defines the observed state of DiscordChannel.
+            description: |-
+              ShopStatus defines the observed state of Shop.
+              internal/controller/shop_controller.go. Until then this is always empty on freshly
+              created resources, which is expected: a CRD's API server accepts and stores spec/status
+              regardless of whether any controller is running to reconcile it.
             properties:
-              channelId:
-                type: string
               conditions:
                 items:
                   description: Condition contains details for one aspect of the current
@@ -137,17 +156,9 @@ spec:
                   - type
                   type: object
                 type: array
-              webhookId:
-                description: |-
-                  WebhookID is the Discord webhook backing this channel's alert notifications. It is not
-                  sensitive on its own (unlike the webhook's token/URL, which lives in the Secret named by
-                  WebhookSecretRef) and is kept here so the controller can delete the webhook on cleanup.
-                type: string
-              webhookSecretRef:
-                description: |-
-                  WebhookSecretRef is the name, in the same namespace, of the Secret holding this channel's
-                  webhook URL (key "webhookUrl") — e.g. for Alertmanager to reference. The URL itself is
-                  never stored here since it embeds the webhook's secret token.
+              phase:
+                description: ShopPhase is a coarse summary of a Shop's reconciliation
+                  state.
                 type: string
             type: object
         type: object
@@ -155,4 +166,3 @@ spec:
     storage: true
     subresources:
       status: {}
-{{- end }}

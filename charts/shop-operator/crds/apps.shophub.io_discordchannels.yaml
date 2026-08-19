@@ -1,40 +1,36 @@
-{{- if .Values.crds.install }}
-# Mirrors shophub-shop-operator's config/crd/bases/apps.shophub.io_shops.yaml exactly (real
-# `controller-gen crd` output). Lives under templates/ (with this guard) rather than Helm's
-# special crds/ directory so .Values.crds.install can actually turn it off — Helm's crds/
-# mechanism is unconditional, no values access at all. The resource-policy annotation keeps
-# Helm's default template behavior (delete-on-uninstall) from taking existing
-# Shop/Wallet/DiscordChannel resources down with it.
+# Mirrors shophub-shop-operator's config/crd/bases/apps.shophub.io_discordchannels.yaml
+# exactly (real `controller-gen crd` output) — see apps.shophub.io_shops.yaml in this same
+# directory for why this lives in Helm's special crds/ folder. Keep the two in sync if the
+# operator's CRD schema changes.
+#
+# This is the CRD backing ../templates/platform-discord-channel.yaml's DiscordChannel CR.
 apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
-  name: shops.apps.shophub.io
+  name: discordchannels.apps.shophub.io
   annotations:
     helm.sh/resource-policy: keep
     controller-gen.kubebuilder.io/version: v0.16.5
 spec:
   group: apps.shophub.io
   names:
-    kind: Shop
-    listKind: ShopList
-    plural: shops
-    singular: shop
+    kind: DiscordChannel
+    listKind: DiscordChannelList
+    plural: discordchannels
+    singular: discordchannel
   scope: Namespaced
   versions:
   - additionalPrinterColumns:
-    - jsonPath: .spec.availability
-      name: Availability
+    - jsonPath: .spec.shopRef
+      name: Shop
       type: string
-    - jsonPath: .spec.databaseKind
-      name: Database
-      type: string
-    - jsonPath: .status.phase
-      name: Phase
+    - jsonPath: .spec.channelName
+      name: Channel
       type: string
     name: v1
     schema:
       openAPIV3Schema:
-        description: Shop is the Schema for the shops API.
+        description: DiscordChannel is the Schema for the discordchannels API.
         properties:
           apiVersion:
             description: |-
@@ -54,43 +50,34 @@ spec:
           metadata:
             type: object
           spec:
-            description: ShopSpec defines the desired state of Shop.
+            description: DiscordChannelSpec defines the desired state of DiscordChannel.
             properties:
-              availability:
-                default: standard
-                description: 'Availability controls replica count: standard=2, high=3.'
-                enum:
-                - standard
-                - high
-                type: string
-              databaseKind:
-                default: standard
-                description: 'DatabaseKind selects the shop''s database: standard=PostgreSQL
-                  (CNPG), light=Redis.'
-                enum:
-                - standard
-                - light
-                type: string
-              name:
-                description: Name is the shop's display name.
+              channelName:
+                description: ChannelName is the desired Discord channel name for this
+                  shop's alert notifications.
                 minLength: 1
                 type: string
-              walletAddress:
-                description: WalletAddress is the on-chain address that receives this
-                  shop's customer payments.
+              guildId:
+                description: |-
+                  GuildID is the Discord server (guild) this channel should be created in — the shop
+                  owner's own server, once they've invited the bot to it. Left empty, the reconciler falls
+                  back to the operator's own default guild (DISCORD_GUILD_ID), which is also how
+                  shophub-app's own platform-level alert channel is provisioned (it never sets this field).
+                type: string
+              shopRef:
+                description: ShopRef is the name of the owning Shop resource, in the
+                  same namespace.
                 minLength: 1
                 type: string
             required:
-            - name
-            - walletAddress
+            - channelName
+            - shopRef
             type: object
           status:
-            description: |-
-              ShopStatus defines the observed state of Shop.
-              internal/controller/shop_controller.go. Until then this is always empty on freshly
-              created resources, which is expected: a CRD's API server accepts and stores spec/status
-              regardless of whether any controller is running to reconcile it.
+            description: DiscordChannelStatus defines the observed state of DiscordChannel.
             properties:
+              channelId:
+                type: string
               conditions:
                 items:
                   description: Condition contains details for one aspect of the current
@@ -147,9 +134,17 @@ spec:
                   - type
                   type: object
                 type: array
-              phase:
-                description: ShopPhase is a coarse summary of a Shop's reconciliation
-                  state.
+              webhookId:
+                description: |-
+                  WebhookID is the Discord webhook backing this channel's alert notifications. It is not
+                  sensitive on its own (unlike the webhook's token/URL, which lives in the Secret named by
+                  WebhookSecretRef) and is kept here so the controller can delete the webhook on cleanup.
+                type: string
+              webhookSecretRef:
+                description: |-
+                  WebhookSecretRef is the name, in the same namespace, of the Secret holding this channel's
+                  webhook URL (key "webhookUrl") — e.g. for Alertmanager to reference. The URL itself is
+                  never stored here since it embeds the webhook's secret token.
                 type: string
             type: object
         type: object
@@ -157,4 +152,3 @@ spec:
     storage: true
     subresources:
       status: {}
-{{- end }}

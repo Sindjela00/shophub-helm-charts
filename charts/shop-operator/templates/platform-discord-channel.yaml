@@ -6,19 +6,15 @@
 # rather than created by shophub-app, since there's exactly one of these and no per-user
 # onboarding step makes sense for it.
 #
-# Rendered as a post-install hook (not a plain template) so it is only ever submitted to the
-# API server AFTER the templates/crds/*.yaml manifests have gone through their own, earlier
-# apply phase and had time to become Established. Without this, `helm install` sorts manifests
-# by Kind (CRDs before custom resources) but does NOT wait for the CRD's REST endpoint to
-# actually register before submitting this DiscordChannel CR in the same batch — a well-known
-# Helm CRD/CR ordering limitation that fails deterministically on a clean cluster with
-# "no matches for kind DiscordChannel". Post-install hooks run as a distinct, later phase, which
-# gives the CRD apply time to land. Intentionally post-install only (no post-upgrade): this
-# resource's status.webhookId is used by the controller to delete the live Discord webhook on
-# CR deletion (see the CRD's own comment), so re-running this hook on every `helm upgrade`
-# would require a delete-before-recreate hook policy that churns (deletes + recreates) the
-# platform's real Discord webhook on every deploy. If future editors "simplify" this back into
-# a plain template, the install-time race comes back.
+# A plain template, not a hook: this used to be a post-install hook to dodge the CRD/CR
+# ordering race (see ../crds/apps.shophub.io_shops.yaml for the full writeup), but that only
+# masked the race for a fresh `helm install` and left it completely broken on `helm upgrade`
+# against a previously-failed release, since post-install hooks never re-fire there — a real
+# release-management dead end this chart hit on a genuinely fresh cluster. Now that the CRDs
+# live in Helm's crds/ directory (which forces a discovery-cache refresh before any other
+# manifest — including this one — gets built), a plain template reconciles normally on every
+# install *and* upgrade, the same as every other resource in this chart, with no ordering
+# workaround needed.
 apiVersion: apps.shophub.io/v1
 kind: DiscordChannel
 metadata:
@@ -26,9 +22,6 @@ metadata:
   namespace: {{ .Release.Namespace }}
   labels:
     {{- include "shop-operator.labels" . | nindent 4 }}
-  annotations:
-    helm.sh/hook: post-install
-    helm.sh/hook-weight: "5"
 spec:
   shopRef: shophub-app
   channelName: {{ .Values.discord.platformChannelName | quote }}

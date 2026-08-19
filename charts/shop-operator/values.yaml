@@ -23,13 +23,13 @@ serviceAccount:
 
 # CRDs (Shop, Wallet, DiscordChannel) live in this chart's crds/ directory, Helm's dedicated
 # mechanism for CRDs (https://helm.sh/docs/chart_best_practices/custom_resource_definitions/).
-# Helm installs them before any other template and — deliberately — never upgrades or deletes
-# them on `helm upgrade`/`helm uninstall`, so a botched release can't take the CRDs (and
-# everyone's Shop/Wallet/DiscordChannel resources) down with it.
-crds:
-  # -- Set to false to skip installing the CRDs at all (e.g. if they're already managed
-  # separately). Only affects the initial `helm install`, per the Helm CRD limitation above.
-  install: true
+# Helm installs them before any other template — with a discovery-cache refresh afterward, so
+# resources of these Kinds created elsewhere in this same install/upgrade don't race the CRD's
+# registration — and, deliberately, never upgrades or deletes them on `helm upgrade`/`helm
+# uninstall`, so a botched release can't take the CRDs (and everyone's Shop/Wallet/DiscordChannel
+# resources) down with it. To skip installing them (e.g. if they're already managed separately),
+# use Helm's own `helm install --skip-crds` flag — there's no values-driven toggle for this,
+# since crds/ is unconditional by design (upgrade/uninstall never touch it regardless).
 
 # The Discord bot credentials the DiscordChannel controller uses to create each shop's alert
 # channel. Prefer existingSecret in production — it keeps the token out of `helm install -f
