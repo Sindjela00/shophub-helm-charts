@@ -103,6 +103,18 @@ kubernetes:
   # same as database/jwt secrets above aren't given real values here either.
   externalHost: ""
 
+discord:
+  # -- The bot's Discord application client id — public, not secret (it's baked into every
+  # invite link a shop owner is handed). No sensible default; leave empty to disable the invite
+  # link (the onboarding endpoints still work, just build an unusable URL).
+  clientId: ""
+  # -- Name/key of the Secret holding the shared bot token — must match the shop-operator
+  # chart's own discord.existingSecret (or its BOTH botToken/existingSecret name if that chart
+  # generates one) exactly, since this app reads that same Secret live via the Kubernetes API
+  # rather than having its own copy of the token.
+  botTokenSecretName: shop-operator-discord
+  botTokenSecretKey: DISCORD_BOT_TOKEN
+
 # kube-prometheus-stack is a chart dependency (see Chart.yaml) providing the observability
 # stack (spec 3.3). Disable if the cluster already has its own Prometheus/Grafana stack.
 kube-prometheus-stack:
