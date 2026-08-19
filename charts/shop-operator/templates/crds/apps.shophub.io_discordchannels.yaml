@@ -3,6 +3,10 @@
 # exactly (real `controller-gen crd` output) — see apps.shophub.io_shops.yaml in this same
 # directory for why this lives under templates/ instead of Helm's crds/ folder. Keep the two
 # in sync if the operator's CRD schema changes.
+#
+# This is the CRD backing ../platform-discord-channel.yaml's DiscordChannel CR. That template
+# is deliberately a post-install hook (not a plain resource) so it never gets submitted to the
+# API server in the same apply batch as this CRD — see the comment there for why.
 apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
