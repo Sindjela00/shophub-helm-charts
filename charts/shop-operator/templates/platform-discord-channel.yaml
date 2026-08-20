@@ -5,6 +5,16 @@
 # the same guild any not-yet-attached shop's channel would use. Static and declarative here
 # rather than created by shophub-app, since there's exactly one of these and no per-user
 # onboarding step makes sense for it.
+#
+# A plain template, not a hook: this used to be a post-install hook to dodge the CRD/CR
+# ordering race (see ../crds/apps.shophub.io_shops.yaml for the full writeup), but that only
+# masked the race for a fresh `helm install` and left it completely broken on `helm upgrade`
+# against a previously-failed release, since post-install hooks never re-fire there — a real
+# release-management dead end this chart hit on a genuinely fresh cluster. Now that the CRDs
+# live in Helm's crds/ directory (which forces a discovery-cache refresh before any other
+# manifest — including this one — gets built), a plain template reconciles normally on every
+# install *and* upgrade, the same as every other resource in this chart, with no ordering
+# workaround needed.
 apiVersion: apps.shophub.io/v1
 kind: DiscordChannel
 metadata:
