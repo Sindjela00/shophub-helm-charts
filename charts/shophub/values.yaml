@@ -108,12 +108,24 @@ discord:
   # invite link a shop owner is handed). No sensible default; leave empty to disable the invite
   # link (the onboarding endpoints still work, just build an unusable URL).
   clientId: ""
-  # -- Name/key of the Secret holding the shared bot token — must match the shop-operator
-  # chart's own discord.existingSecret (or its BOTH botToken/existingSecret name if that chart
-  # generates one) exactly, since this app reads that same Secret live via the Kubernetes API
-  # rather than having its own copy of the token.
-  botTokenSecretName: shop-operator-discord
-  botTokenSecretKey: DISCORD_BOT_TOKEN
+  # -- Inline bot token (creates a Secret in this release's own namespace, read by this app via
+  # a plain env var like jwt.signingKey/database.connectionString above). Prefer existingSecret
+  # in production, same reasoning as those two.
+  #
+  # This chart, not shop-operator's, owns the Discord bot's credentials — shop-operator's
+  # DiscordChannelReconciler reads the *same* Secret live via the Kubernetes API instead of
+  # having its own copy (it already has cluster-wide `secrets: get` via its ClusterRole, so no
+  # extra RBAC grant is needed for that cross-namespace read). If you change existingSecret,
+  # nameOverride, or fullnameOverride here, update shop-operator's own
+  # discord.secretName/secretNamespace values to match.
+  botToken: ""
+  # -- Only consumed by shop-operator (the fallback guild for shophub-app's own platform alert
+  # channel and any shop that hasn't attached its own server yet) — this app has no use for it
+  # itself, it's just carried in the same Secret since the two values are managed together.
+  guildId: ""
+  existingSecret: ""
+  existingSecretBotTokenKey: DISCORD_BOT_TOKEN
+  existingSecretGuildIdKey: DISCORD_GUILD_ID
 
 # kube-prometheus-stack is a chart dependency (see Chart.yaml) providing the observability
 # stack (spec 3.3). Disable if the cluster already has its own Prometheus/Grafana stack.

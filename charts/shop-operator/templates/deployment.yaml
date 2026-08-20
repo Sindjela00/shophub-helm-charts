@@ -31,18 +31,19 @@ spec:
             - --leader-elect
             {{- end }}
           env:
-            {{- if or .Values.discord.existingSecret .Values.discord.botToken }}
-            - name: DISCORD_BOT_TOKEN
-              valueFrom:
-                secretKeyRef:
-                  name: {{ include "shop-operator.discordSecretName" . }}
-                  key: {{ ternary .Values.discord.existingSecretBotTokenKey "DISCORD_BOT_TOKEN" (ne .Values.discord.existingSecret "") }}
-            - name: DISCORD_GUILD_ID
-              valueFrom:
-                secretKeyRef:
-                  name: {{ include "shop-operator.discordSecretName" . }}
-                  key: {{ ternary .Values.discord.existingSecretGuildIdKey "DISCORD_GUILD_ID" (ne .Values.discord.existingSecret "") }}
-            {{- end }}
+            # Plain values, not secretKeyRef — this operator doesn't hold a copy of the bot
+            # token in its own env at all, it reads the real Secret live via the Kubernetes API
+            # each reconcile (see internal/controller/discordchannel_controller.go), using these
+            # four to know where to look. See discord.secretName's comment in values.yaml for
+            # why the credential lives in the shophub chart's namespace instead of this one's.
+            - name: DISCORD_SECRET_NAMESPACE
+              value: {{ .Values.discord.secretNamespace | quote }}
+            - name: DISCORD_SECRET_NAME
+              value: {{ .Values.discord.secretName | quote }}
+            - name: DISCORD_SECRET_BOT_TOKEN_KEY
+              value: {{ .Values.discord.secretBotTokenKey | quote }}
+            - name: DISCORD_SECRET_GUILD_ID_KEY
+              value: {{ .Values.discord.secretGuildIdKey | quote }}
             {{- if .Values.shopImage }}
             - name: SHOP_IMAGE
               value: {{ .Values.shopImage | quote }}
