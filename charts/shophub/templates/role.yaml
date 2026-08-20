@@ -17,11 +17,23 @@ rules:
     resources:
       - shops
       - wallets
+    verbs:
+      - create
+      - patch
+      - delete
+  # discordchannels gets its own rule (rather than sharing the create/patch/delete-only rule
+  # above) because ShopDiscordService.GetStatusAsync DOES read a DiscordChannel CR back via
+  # GetNamespacedCustomObjectAsync, to back the "Discord" button's status check — get only,
+  # since that call always reads one named object and never lists/watches.
+  - apiGroups:
+      - apps.shophub.io
+    resources:
       - discordchannels
     verbs:
       - create
       - patch
       - delete
+      - get
   # ShopAdminKeyService reads back the per-shop admin-key Secret
   # shophub-shop-operator provisions — get only, this never creates or modifies it.
   - apiGroups:
